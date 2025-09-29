@@ -1,0 +1,606 @@
+
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Jogo - Logística Reversa (Quiz Gamificado)</title>
+<style>
+  :root{
+    --bg:#0f1724; --card:#0b1220; --accent:#06b6d4; --muted:#94a3b8; --success:#10b981; --danger:#ef4444;
+    --glass: rgba(255,255,255,0.03);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; background:linear-gradient(180deg,#071025 0%, #081428 60%); color:#e6eef6;
+    display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .container{
+    width:100%; max-width:980px; background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:14px; padding:22px; box-shadow: 0 10px 30px rgba(2,6,23,0.6);
+    border:1px solid rgba(255,255,255,0.03);
+  }
+  header{display:flex; gap:16px; align-items:center; margin-bottom:12px}
+  .logo{
+    width:64px; height:64px; border-radius:12px; background:var(--glass); display:flex; align-items:center; justify-content:center;
+    border:1px solid rgba(255,255,255,0.04);
+  }
+  .logo h1{margin:0;font-size:18px;color:var(--accent)}
+  h2{margin:0;font-size:20px}
+  .meta{margin-left:auto; text-align:right; color:var(--muted); font-size:13px}
+  .game-grid{display:grid; grid-template-columns: 1fr 320px; gap:18px; margin-top:18px}
+  .card{
+    background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+    border-radius:12px; padding:18px; min-height:200px; border:1px solid rgba(255,255,255,0.03);
+  }
+  .question{font-size:18px; margin-bottom:12px}
+  .choices{display:flex; flex-direction:column; gap:10px}
+  .choice{
+    background: rgba(255,255,255,0.02); padding:12px 14px; border-radius:10px; cursor:pointer;
+    display:flex; align-items:center; gap:12px; transition:transform .12s, background .12s, box-shadow .12s;
+    border:1px solid rgba(255,255,255,0.02);
+  }
+  .choice:hover{transform:translateY(-4px); box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+  .choice.correct{background:linear-gradient(90deg, rgba(16,185,129,0.12), rgba(16,185,129,0.06)); border-color: rgba(16,185,129,0.25);}
+  .choice.wrong{background:linear-gradient(90deg, rgba(239,68,68,0.08), rgba(239,68,68,0.03)); border-color: rgba(239,68,68,0.25);}
+  .small{font-size:13px;color:var(--muted)}
+  .sidebar{display:flex; flex-direction:column; gap:12px}
+  .status{display:flex; gap:8px; align-items:center; justify-content:space-between; padding:10px; border-radius:10px; background:rgba(255,255,255,0.01); border:1px solid rgba(255,255,255,0.02)}
+  .meter{height:10px; background:rgba(255,255,255,0.03); border-radius:999px; overflow:hidden}
+  .meter > i{display:block; height:100%; background:linear-gradient(90deg,var(--accent), #7c3aed); width:0%;}
+  .btn{
+    display:inline-flex; gap:10px; align-items:center; justify-content:center; padding:10px 14px; border-radius:10px; cursor:pointer;
+    background:linear-gradient(90deg,var(--accent), #7c3aed); color:#011627; font-weight:700; border:0;
+  }
+  .ghost{background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--muted); padding:8px 10px; border-radius:10px; cursor:pointer;}
+  footer{margin-top:16px; display:flex; justify-content:space-between; align-items:center; gap:10px}
+  .badge{padding:6px 8px; border-radius:999px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.03); font-weight:600; color:var(--muted)}
+  .center{display:flex; gap:8px; align-items:center}
+  .levelUp{animation:levelAnim .9s ease}
+  @keyframes levelAnim{0%{transform:scale(.86);opacity:0}60%{transform:scale(1.06);opacity:1}100%{transform:scale(1)}}
+  .match-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+  .match-item{background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; cursor:grab; user-select:none; border:1px solid rgba(255,255,255,0.02)}
+  .hidden{display:none}
+  .top-controls{display:flex; gap:8px; align-items:center}
+  .share-input{width:100%; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); background:transparent; color:var(--muted)}
+  .leaderboard{max-height:280px; overflow:auto; padding-right:6px}
+  .lb-row{display:flex; justify-content:space-between; padding:8px 4px; border-bottom:1px dashed rgba(255,255,255,0.02);}
+  .success-note{color:var(--success); font-weight:700}
+  .center-column{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px}
+  @media (max-width:880px){
+    .game-grid{grid-template-columns:1fr; }
+    .sidebar{order:2}
+  }
+</style>
+</head>
+<body>
+<div class="container" role="application" aria-label="Jogo de Logística Reversa">
+  <header>
+    <div class="logo" aria-hidden="true"><h1>LR</h1></div>
+    <div>
+      <h2>Jogo: Logística Reversa — Quiz Gamificado</h2>
+      <div class="small">Aprenda os conceitos dos 5Rs e práticas de logística reversa jogando</div>
+    </div>
+    <div class="meta">
+      <div id="playerNameText">Jogador: <strong id="playerName">Visitante</strong></div>
+      <div class="small">Pontuação: <span id="scoreHeader">0</span> • Nível: <span id="levelHeader">1</span></div>
+    </div>
+  </header>
+
+  <main class="game-grid">
+    <section class="card" id="mainCard" aria-live="polite">
+      <div id="contentArea">
+        <!-- Dynamic content goes here -->
+      </div>
+    </section>
+
+    <aside class="sidebar">
+      <div class="card status">
+        <div>
+          <div class="small">Tempo restante</div>
+          <div id="timerDisplay" style="font-weight:800">00:00</div>
+        </div>
+        <div style="width:140px">
+          <div class="small">Progresso</div>
+          <div class="meter" aria-hidden="true"><i id="progressBar"></i></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <div class="small">Pontuação atual</div>
+          <div style="font-weight:900;font-size:18px" id="scoreBox">0</div>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="startBtn">Iniciar Jogo</button>
+          <button class="ghost" id="resetBtn" title="Reiniciar jogo">Reiniciar</button>
+        </div>
+        <hr style="margin:12px 0;border:none;border-top:1px solid rgba(255,255,255,0.02)" />
+        <div class="small" style="margin-bottom:6px">Compartilhar / Link</div>
+        <div style="display:flex;gap:8px">
+          <input id="shareUrl" class="share-input" readonly aria-label="Link para compartilhar" />
+          <button class="ghost" id="copyLinkBtn" title="Copiar link">Copiar</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div class="small">Quadro de líderes (local)</div>
+          <button class="ghost" id="clearLbBtn" title="Limpar placar">Limpar</button>
+        </div>
+        <div class="leaderboard" id="leaderboard"></div>
+      </div>
+    </aside>
+  </main>
+
+  <footer>
+    <div class="badge">5 perguntas por rodada • Pontos por resposta correta: +10</div>
+    <div class="center">
+      <div class="small">Desenvolvido com foco educativo • Tema: Logística Reversa</div>
+    </div>
+  </footer>
+</div>
+
+<script>
+/*
+  Jogo: Logística Reversa - Quiz Gamificado
+  Funcionalidades:
+  - Rodadas com 5 perguntas variadas (V/F, múltipla escolha, associação, cenário).
+  - Temporizador por rodada (por padrão 90s).
+  - Sistema de pontos e níveis.
+  - Badges simples por acertos consecutivos.
+  - Gerar link compartilhável (estado básico codificado em URL).
+  - Armazenamento local de leaderboard.
+*/
+
+const QUESTIONS = [
+  // multiple choice
+  {type:'mc', q:'Qual é um dos principais objetivos da logística reversa?', choices:['Aumentar os custos da empresa','Reduzir impactos ambientais','Descartar resíduos em aterros sanitários','Evitar o reaproveitamento de materiais'], answer:1, explain:'A logística reversa busca reinserir produtos ou materiais no ciclo produtivo e reduzir impactos ambientais.'},
+  {type:'mc', q:'Quais produtos mais dependem da logística reversa no Brasil?', choices:['Embalagens, eletrônicos e pneus','Produtos de luxo e joias','Produtos agrícolas apenas','Cosméticos em geral'], answer:0, explain:'Embalagens, eletrônicos e pneus têm cadeias bem estabelecidas de logística reversa.'},
+  // true/false (vf)
+  {type:'tf', q:'A logística reversa trata apenas do transporte de mercadorias para o consumidor final.', answer:false, explain:'Logística reversa trata do fluxo de retorno: devoluções, reciclagem, recondicionamento, descarte adequado.'},
+  {type:'tf', q:'O objetivo da logística reversa é reinserir produtos ou materiais no ciclo produtivo.', answer:true, explain:'Isso reduz extração de recursos e o impacto ambiental.'},
+  {type:'tf', q:'Pilhas, baterias e eletrônicos podem ser descartados junto com o lixo comum.', answer:false, explain:'Esses itens têm componentes tóxicos e precisam de pontos de coleta especializados.'},
+  // association (match) - we'll use matching via drag/drop pairs
+  {type:'match', q:'Associe os itens ao tipo de logística reversa correto:', pairs:[
+    ['Pilhas e baterias','Pontos de coleta específicos'],
+    ['Garrafas PET','Reciclagem industrial'],
+    ['Eletrodomésticos quebrados','Reuso ou desmontagem de peças'],
+    ['Pneus usados','Reaproveitamento de insumos']
+  ], explain:'Diferentes itens exigem diferentes estratégias: pontos de coleta, reciclagem industrial, desmontagem e reaproveitamento.'},
+  // scenario
+  {type:'scenario', q:'Um cliente devolveu um notebook quebrado. O que você deve fazer?', choices:[
+    'Jogar no lixo comum',
+    'Separar peças reaproveitáveis e enviar resíduos tóxicos para tratamento adequado',
+    'Guardar no estoque até vencer a garantia',
+    'Enviar para o aterro sanitário mais próximo'
+  ], answer:1, explain:'Peças reaproveitáveis podem voltar à cadeia produtiva; resíduos tóxicos exigem tratamento adequado.'},
+  // more MC for variety
+  {type:'mc', q:'A logística reversa pode trazer qual vantagem econômica para empresas?', choices:['Aumento de custos sem retorno','Geração de novas matérias-primas e economia','Exclusão do mercado','Redução da qualidade dos produtos'], answer:1, explain:'A recuperação de material reduz necessidade de compra de matéria-prima.'},
+  {type:'mc', q:'Qual é uma prática comum na logística reversa de embalagens?', choices:['Reprodução de embalagens descartáveis','Reutilização e reciclagem das embalagens','Queima controlada','Exportação como lixo'], answer:1, explain:'Reutilizar e reciclar embalagens reduz resíduos e demanda por material virgem.'}
+];
+
+// Game state
+let state = {
+  playerName: localStorage.getItem('lr_playerName') || 'Visitante',
+  score: 0,
+  level: 1,
+  roundQuestions: [],
+  currentIndex: 0,
+  timeLeft: 90,
+  timer: null,
+  streak:0,
+  leaderboard: JSON.parse(localStorage.getItem('lr_lb')||'[]'),
+  shareToken: ''
+};
+
+const contentArea = document.getElementById('contentArea');
+const startBtn = document.getElementById('startBtn');
+const resetBtn = document.getElementById('resetBtn');
+const timerDisplay = document.getElementById('timerDisplay');
+const scoreBox = document.getElementById('scoreBox');
+const scoreHeader = document.getElementById('scoreHeader');
+const levelHeader = document.getElementById('levelHeader');
+const playerNameText = document.getElementById('playerName');
+const progressBar = document.getElementById('progressBar');
+const shareUrl = document.getElementById('shareUrl');
+const copyLinkBtn = document.getElementById('copyLinkBtn');
+const leaderboardEl = document.getElementById('leaderboard');
+const clearLbBtn = document.getElementById('clearLbBtn');
+
+function init(){
+  playerNameText.textContent = state.playerName;
+  scoreBox.textContent = state.score;
+  scoreHeader.textContent = state.score;
+  levelHeader.textContent = state.level;
+  updateLeaderboardUI();
+  generateShareUrl();
+  renderWelcome();
+}
+
+function renderWelcome(){
+  contentArea.innerHTML = `
+    <div class="center-column" style="padding:12px">
+      <h3>Bem-vindo(a) — Logística Reversa</h3>
+      <p class="small" style="max-width:640px;text-align:center">Este jogo apresenta perguntas sobre logística reversa com mecânicas gamificadas: pontos, tempo, desafios de associação e cenários reais. Clique em <strong>Iniciar Jogo</strong> para começar.</p>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <input id="nameInput" placeholder="Digite seu nome (opcional)" style="padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.03);background:transparent;color:var(--muted)" />
+        <button class="btn" id="startNow">Começar</button>
+      </div>
+    </div>
+  `;
+  document.getElementById('startNow').addEventListener('click', ()=>{
+    const v = document.getElementById('nameInput').value.trim();
+    if(v){ state.playerName = v; localStorage.setItem('lr_playerName', v); playerNameText.textContent = v; }
+    startRound();
+  });
+}
+
+function startRound(){
+  // prepare 5 random questions
+  state.roundQuestions = pickQuestions(5);
+  state.currentIndex = 0;
+  state.timeLeft = 90;
+  state.timer && clearInterval(state.timer);
+  startTimer();
+  renderQuestion();
+  updateProgress();
+  generateShareUrl();
+}
+
+function pickQuestions(n){
+  // shuffle and pick
+  const pool = [...QUESTIONS];
+  for(let i=pool.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [pool[i],pool[j]]=[pool[j],pool[i]];
+  }
+  return pool.slice(0,n);
+}
+
+function startTimer(){
+  timerDisplay.textContent = formatTime(state.timeLeft);
+  state.timer = setInterval(()=>{
+    state.timeLeft--;
+    timerDisplay.textContent = formatTime(state.timeLeft);
+    if(state.timeLeft<=0){
+      clearInterval(state.timer);
+      onRoundEnd();
+    }
+  },1000);
+}
+
+function formatTime(s){
+  const mm = String(Math.floor(s/60)).padStart(2,'0');
+  const ss = String(s%60).padStart(2,'0');
+  return mm+':'+ss;
+}
+
+function renderQuestion(){
+  const qObj = state.roundQuestions[state.currentIndex];
+  if(!qObj){ return onRoundEnd(); }
+  const idx = state.currentIndex + 1;
+  let html = `<div style="display:flex;justify-content:space-between;align-items:center"><div class="small">Pergunta ${idx} de ${state.roundQuestions.length}</div><div class="small">Nível ${state.level}</div></div><hr style="margin:10px 0;border:none;border-top:1px solid rgba(255,255,255,0.02)" />`;
+  if(qObj.type==='mc' || qObj.type==='scenario'){
+    html += `<div class="question">${escapeHtml(qObj.q)}</div><div class="choices">`;
+    qObj.choices.forEach((c,i)=> html += `<div class="choice" data-choice="${i}" role="button" tabindex="0">${escapeHtml(c)}</div>`);
+    html += `</div>`;
+    contentArea.innerHTML = html;
+    Array.from(contentArea.querySelectorAll('.choice')).forEach(el=>{
+      el.addEventListener('click', onChoiceClick);
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') onChoiceClick({target:el}) });
+    });
+  } else if(qObj.type==='tf'){
+    html += `<div class="question">${escapeHtml(qObj.q)}</div><div class="choices">
+      <div class="choice" data-choice="true">Verdadeiro</div>
+      <div class="choice" data-choice="false">Falso</div>
+    </div>`;
+    contentArea.innerHTML = html;
+    Array.from(contentArea.querySelectorAll('.choice')).forEach(el=>{
+      el.addEventListener('click', onChoiceClick);
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') onChoiceClick({target:el})});
+    });
+  } else if(qObj.type==='match'){
+    renderMatch(qObj);
+  }
+  updateProgress();
+}
+
+function renderMatch(qObj){
+  // create draggable match UI
+  const leftItems = qObj.pairs.map(p=>p[0]);
+  const rightItems = qObj.pairs.map(p=>p[1]);
+  // shuffle right items
+  const shuffledRight = [...rightItems].sort(()=>Math.random()-0.5);
+  let html = `<div class="question">${escapeHtml(qObj.q)}</div>
+  <div class="match-grid" style="margin-top:12px">
+    <div>
+      <div class="small">Arraste para associar</div>
+      <div id="leftCol" style="display:grid;gap:8px;margin-top:8px">`;
+  leftItems.forEach((t,i)=> html += `<div class="match-item" draggable="false" data-left="${i}" id="left_${i}">${escapeHtml(t)}</div>`);
+  html += `</div></div><div>
+    <div class="small">Alvos</div><div id="rightCol" style="display:grid;gap:8px;margin-top:8px">`;
+  shuffledRight.forEach((t,i)=> html += `<div class="match-item" draggable="true" data-right="${i}" id="right_${i}">${escapeHtml(t)}</div>`);
+  html += `</div></div></div>
+  <div style="display:flex;gap:8px;margin-top:12px">
+    <button class="btn" id="submitMatch">Enviar associação</button>
+    <button class="ghost" id="resetMatch">Reiniciar</button>
+  </div>`;
+  contentArea.innerHTML = html;
+
+  // make simple click-to-assign matching: click left then click right to assign
+  let selectedLeft = null;
+  const leftCol = document.getElementById('leftCol');
+  const rightCol = document.getElementById('rightCol');
+  leftCol.querySelectorAll('.match-item').forEach(el=>{
+    el.addEventListener('click', ()=> {
+      leftCol.querySelectorAll('.match-item').forEach(x=>x.style.outline='none');
+      el.style.outline='2px solid rgba(6,182,212,0.25)';
+      selectedLeft = parseInt(el.dataset.left);
+    });
+  });
+  rightCol.querySelectorAll('.match-item').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      if(selectedLeft===null){
+        // flash
+        el.style.transform='scale(1.03)';
+        setTimeout(()=>el.style.transform='',120);
+        return;
+      }
+      // assign mapping by storing to element dataset
+      const assigned = leftCol.querySelector(`#left_${selectedLeft}`);
+      assigned.dataset.assigned = el.dataset.right;
+      assigned.style.opacity = 0.9;
+      assigned.style.border='1px dashed rgba(6,182,212,0.25)';
+      selectedLeft = null;
+      leftCol.querySelectorAll('.match-item').forEach(x=>x.style.outline='none');
+    });
+  });
+
+  document.getElementById('resetMatch').addEventListener('click', ()=> {
+    leftCol.querySelectorAll('.match-item').forEach(x=>{ delete x.dataset.assigned; x.style.border='1px solid rgba(255,255,255,0.02)';});
+  });
+  document.getElementById('submitMatch').addEventListener('click', ()=> {
+    // build mapping and check correctness
+    const mapping = [];
+    leftCol.querySelectorAll('.match-item').forEach(el=>{
+      mapping.push({left:el.textContent.trim(), assigned: el.dataset.assigned!==undefined ? rightCol.querySelector(`#right_${el.dataset.assigned}`).textContent.trim() : null});
+    });
+    // evaluate
+    let correct = 0;
+    qObj.pairs.forEach(pair=>{
+      const found = mapping.find(m=>m.left===pair[0]);
+      if(found && found.assigned===pair[1]) correct++;
+    });
+    const points = correct === qObj.pairs.length ? 20 : Math.max(0, correct*5);
+    showMatchResult(correct, qObj.pairs.length, points, qObj.explain);
+  });
+
+}
+
+function showMatchResult(correct, total, points, explain){
+  // visual feedback then next question
+  contentArea.innerHTML = `<div class="center-column"><h3>Resultado</h3><div class="small">Você acertou ${correct} de ${total}</div><div style="font-weight:800;font-size:28px;margin-top:8px">${points} pts</div><div class="small" style="max-width:600px;text-align:center;margin-top:10px">${escapeHtml(explain)}</div><div style="margin-top:12px"><button class="btn" id="nextBtn">Próxima</button></div></div>`;
+  state.score += points;
+  state.streak = points>0 ? state.streak+1 : 0;
+  updateScoreUI();
+  document.getElementById('nextBtn').addEventListener('click', ()=>{ nextQuestion(); });
+}
+
+function onChoiceClick(e){
+  const target = e.target;
+  const chosen = target.dataset.choice;
+  const qObj = state.roundQuestions[state.currentIndex];
+  // determine correctness
+  let isCorrect = false;
+  if(qObj.type==='mc' || qObj.type==='scenario'){
+    isCorrect = parseInt(chosen,10) === qObj.answer;
+  } else if(qObj.type==='tf'){
+    const boolChosen = chosen === 'true';
+    isCorrect = boolChosen === qObj.answer;
+  }
+  // show feedback
+  Array.from(contentArea.querySelectorAll('.choice')).forEach(el=>{
+    el.classList.remove('correct','wrong');
+    el.style.pointerEvents='none';
+    if(el.dataset.choice!==undefined){
+      if(qObj.type==='mc' || qObj.type==='scenario'){
+        if(parseInt(el.dataset.choice,10)===qObj.answer) el.classList.add('correct');
+      } else if(qObj.type==='tf'){
+        if(String(qObj.answer)===el.dataset.choice) el.classList.add('correct');
+      }
+    }
+  });
+  if(isCorrect){
+    target.classList.add('correct');
+    const pts = 10 + Math.min(10, state.level*2);
+    state.score += pts;
+    state.streak++;
+    animateBadgeIfNeeded();
+    showInlineExplain(true, qObj.explain, pts);
+  } else {
+    target.classList.add('wrong');
+    state.streak=0;
+    // penalty small
+    state.score = Math.max(0, state.score - 2);
+    showInlineExplain(false, qObj.explain, -2);
+  }
+  updateScoreUI();
+  // auto-next after short delay
+  setTimeout(()=> nextQuestion(), 1200);
+}
+
+function showInlineExplain(correct, explain, pts){
+  const note = document.createElement('div');
+  note.className='small';
+  note.style.marginTop='10px';
+  note.innerHTML = (correct?'<span class="success-note">Resposta correta</span>':'<span style="color:var(--danger)">Resposta incorreta</span>')+` • ${escapeHtml(explain)} ${pts>0?(' • +'+pts+' pts'): (pts<0?(' • '+pts+' pts'): '')}`;
+  contentArea.appendChild(note);
+}
+
+function nextQuestion(){
+  state.currentIndex++;
+  if(state.currentIndex >= state.roundQuestions.length){
+    onRoundEnd();
+  } else {
+    renderQuestion();
+  }
+}
+
+function updateScoreUI(){
+  scoreBox.textContent = state.score;
+  scoreHeader.textContent = state.score;
+  levelHeader.textContent = state.level;
+  updateProgress();
+  saveStateToShare();
+}
+
+function updateProgress(){
+  const prog = Math.round((state.currentIndex/state.roundQuestions.length)*100);
+  progressBar.style.width = prog + '%';
+}
+
+function onRoundEnd(){
+  clearInterval(state.timer);
+  // evaluate round and level up if needed
+  const gained = state.score;
+  // level up every 50 points
+  const newLevel = Math.max(1, Math.floor(state.score/50)+1);
+  const leveled = newLevel > state.level;
+  if(leveled) state.level = newLevel;
+  renderRoundSummary(leveled);
+  // save to leaderboard
+  saveToLeaderboard(state.playerName, state.score);
+  updateLeaderboardUI();
+  generateShareUrl();
+}
+
+function renderRoundSummary(leveled){
+  const html = `<div class="center-column"><h3>Fim da rodada</h3>
+    <div class="small">Pontuação total: <strong>${state.score}</strong></div>
+    <div class="small">Nível atual: <strong class="${leveled?'levelUp':''}">${state.level}</strong></div>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn" id="playAgain">Jogar novamente</button>
+      <button class="ghost" id="shareResult">Compartilhar resultado</button>
+    </div>
+  </div>`;
+  contentArea.innerHTML = html;
+  document.getElementById('playAgain').addEventListener('click', ()=> { startRound(); });
+  document.getElementById('shareResult').addEventListener('click', ()=> { copyTextToClipboard(`Joguei o quiz de Logística Reversa e marquei ${state.score} pontos! Experimente você também.`); alert('Resumo copiado para a área de transferência. Cole onde quiser para compartilhar.'); });
+}
+
+function animateBadgeIfNeeded(){
+  if(state.streak>2){
+    // small level-up visual
+    levelHeader.classList.add('levelUp');
+    setTimeout(()=> levelHeader.classList.remove('levelUp'),900);
+  }
+}
+
+function saveToLeaderboard(name, score){
+  // store top 10 local leaderboard
+  const lb = state.leaderboard || [];
+  const existingIdx = lb.findIndex(r=>r.name===name);
+  if(existingIdx>=0){
+    if(score>lb[existingIdx].score) lb[existingIdx].score=score;
+  } else {
+    lb.push({name,score,date: new Date().toISOString()});
+  }
+  lb.sort((a,b)=>b.score-a.score);
+  const top = lb.slice(0,10);
+  state.leaderboard = top;
+  localStorage.setItem('lr_lb', JSON.stringify(top));
+}
+
+function updateLeaderboardUI(){
+  const lb = state.leaderboard || [];
+  if(lb.length===0){
+    leaderboardEl.innerHTML = `<div class="small">Nenhum resultado ainda. Jogue para aparecer aqui!</div>`;
+    return;
+  }
+  leaderboardEl.innerHTML = lb.map((r,i)=>`<div class="lb-row"><div><strong>${i+1}. ${escapeHtml(r.name)}</strong><div class="small">${new Date(r.date).toLocaleString()}</div></div><div style="font-weight:800">${r.score}</div></div>`).join('');
+}
+
+clearLbBtn.addEventListener('click', ()=> {
+  if(confirm('Limpar placar local?')){ localStorage.removeItem('lr_lb'); state.leaderboard=[]; updateLeaderboardUI(); }
+});
+
+resetBtn.addEventListener('click', ()=> {
+  if(confirm('Deseja realmente reiniciar o jogo (pontuação será zerada)?')){
+    state.score=0; state.level=1; state.streak=0; state.roundQuestions=[]; state.currentIndex=0; updateScoreUI(); renderWelcome();
+  }
+});
+
+startBtn.addEventListener('click', ()=> {
+  startRound();
+});
+
+copyLinkBtn.addEventListener('click', ()=> {
+  const val = shareUrl.value;
+  if(val){ copyTextToClipboard(val); alert('Link copiado para a área de transferência.'); }
+});
+
+function copyTextToClipboard(text){
+  navigator.clipboard?.writeText(text).catch(()=>{ // fallback
+    const tmp = document.createElement('textarea'); tmp.value = text; document.body.appendChild(tmp); tmp.select(); document.execCommand('copy'); tmp.remove();
+  });
+}
+
+// SHARE: create a short encoded state string (player name + score + level)
+// This is not a secure token, only to let another user open a prefilled game state.
+function generateShareUrl(){
+  const data = {name: state.playerName, score: state.score, level: state.level, time: Date.now()};
+  const s = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+  const url = location.origin + location.pathname + '?share=' + s;
+  shareUrl.value = url;
+  state.shareToken = s;
+  saveStateToShare();
+}
+
+function saveStateToShare(){
+  // update query param without reload
+  const u = new URL(location.href);
+  if(state.shareToken) u.searchParams.set('share', state.shareToken);
+  else u.searchParams.delete('share');
+  history.replaceState(null, '', u.toString());
+  // also update shareUrl field
+  shareUrl.value = u.toString();
+}
+
+// If the page loads with ?share= token, decode and prefill
+function tryLoadFromShare(){
+  const u = new URL(location.href);
+  const s = u.searchParams.get('share');
+  if(!s) return;
+  try{
+    const decoded = JSON.parse(decodeURIComponent(escape(atob(s))));
+    if(decoded && decoded.name){
+      // offer to load
+      if(confirm(`Carregar estado compartilhado por "${decoded.name}" (pontuação: ${decoded.score})?`)){
+        state.playerName = decoded.name;
+        state.score = decoded.score || 0;
+        state.level = decoded.level || 1;
+        localStorage.setItem('lr_playerName', state.playerName);
+      }
+    }
+  }catch(e){
+    console.warn('Token share inválido', e);
+  }
+}
+
+// helpers
+function escapeHtml(s){ return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+function pickRandomFrom(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+
+function showNotification(msg){ alert(msg); }
+
+// init run
+tryLoadFromShare();
+init();
+
+</script>
+</body>
+</html>
